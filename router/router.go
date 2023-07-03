@@ -2,11 +2,11 @@ package router
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
 
+	"github.com/olad5/go-url-shortener/handlers"
 	"github.com/olad5/go-url-shortener/middleware"
 )
 
@@ -19,7 +19,8 @@ func Initialize() http.Handler {
 var (
 	baseUrl = "/api/v1"
 	routes  = []route{
-		newRoute("GET", baseUrl+"/healthcheck", Healthcheck),
+		newRoute("GET", baseUrl+"/healthcheck", handlers.Healthcheck),
+		newRoute("POST", baseUrl+"/shorten", handlers.Shorten),
 	}
 )
 
@@ -61,12 +62,4 @@ type ctxkey struct{}
 func getField(r *http.Request, index int) string {
 	fields := r.Context().Value(ctxkey{}).([]string)
 	return fields[index]
-}
-
-func Healthcheck(w http.ResponseWriter, r *http.Request) {
-	type healthCheckResponse struct {
-		Status  string `json:"status"`
-		Message string `json:"message"`
-	}
-	json.NewEncoder(w).Encode(healthCheckResponse{Status: "ok", Message: "healthcheck complete"})
 }
