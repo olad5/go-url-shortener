@@ -8,6 +8,7 @@ import (
 
 	"github.com/olad5/go-url-shortener/handlers"
 	"github.com/olad5/go-url-shortener/middleware"
+	"github.com/olad5/go-url-shortener/utils"
 )
 
 func Initialize() http.Handler {
@@ -21,6 +22,7 @@ var (
 	routes  = []route{
 		newRoute("GET", baseUrl+"/healthcheck", handlers.Healthcheck),
 		newRoute("POST", baseUrl+"/shorten", handlers.Shorten),
+		newRoute("GET", baseUrl+"/info/([^/]+)", handlers.Info),
 	}
 )
 
@@ -44,7 +46,7 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 				allow = append(allow, route.method)
 				continue
 			}
-			ctx := context.WithValue(r.Context(), ctxkey{}, matches[1:])
+			ctx := context.WithValue(r.Context(), utils.ParamsContextkey{}, matches[1:])
 			route.handler(w, r.WithContext(ctx))
 			return
 		}
@@ -55,11 +57,4 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.NotFound(w, r)
-}
-
-type ctxkey struct{}
-
-func getField(r *http.Request, index int) string {
-	fields := r.Context().Value(ctxkey{}).([]string)
-	return fields[index]
 }
