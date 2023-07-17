@@ -27,12 +27,14 @@ func NewUrlService() (*UrlService, error) {
 func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
 	randomUniqueId := generateUniqueId()
 	base62String := convertIdToBase62String(randomUniqueId)
+
 	shortUrl := entity.ShortenUrl{
 		ShortUrl: base62String, OriginalUrl: url,
 		ClickCount: 0,
 		UniqueId:   randomUniqueId,
 	}
-	err := u.repository.SaveUrl(shortUrl)
+
+	err := u.repository.CreateUrl(shortUrl)
 	if err != nil {
 		return entity.ShortenUrl{}, err
 	}
@@ -45,6 +47,19 @@ func (u *UrlService) Info(slug string) (entity.ShortenUrl, error) {
 		return entity.ShortenUrl{}, err
 	}
 	return shortUrl, nil
+}
+
+func (u *UrlService) UpdateClickCount(shortUrl entity.ShortenUrl) error {
+	updatedShortUrl := entity.ShortenUrl{
+		ShortUrl: shortUrl.ShortUrl, OriginalUrl: shortUrl.OriginalUrl,
+		ClickCount: shortUrl.ClickCount + 1,
+		UniqueId:   shortUrl.UniqueId,
+	}
+	err := u.repository.UpdateUrl(updatedShortUrl)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Naive Unique Id Generator

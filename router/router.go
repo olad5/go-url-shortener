@@ -23,6 +23,7 @@ var (
 		newRoute("GET", baseUrl+"/healthcheck", handlers.Healthcheck),
 		newRoute("POST", baseUrl+"/shorten", handlers.Shorten),
 		newRoute("GET", baseUrl+"/info/([^/]+)", handlers.Info),
+		newRoute("GET", baseUrl+"/([^/]+)", handlers.Redirect),
 	}
 )
 

@@ -10,11 +10,7 @@ import (
 )
 
 func Shorten(w http.ResponseWriter, r *http.Request) {
-	type requestUrl struct {
-		Url string `json:"url"`
-	}
-
-	var originalUrl requestUrl
+	var originalUrl utils.RequestBody
 	err := json.NewDecoder(r.Body).Decode(&originalUrl)
 	if err != nil {
 		log.Println(err)

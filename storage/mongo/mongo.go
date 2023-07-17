@@ -31,11 +31,28 @@ func New(ctx context.Context, connectionString string) (*MongoRepository, error)
 	return &repo, nil
 }
 
-func (u *MongoRepository) SaveUrl(shortUrl entity.ShortenUrl) error {
+func (u *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := u.urlCollection.InsertOne(ctx, shortUrl)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"unique_id": shortUrl.UniqueId}
+	updatedDoc := bson.M{
+		"$set": shortUrl,
+	}
+
+	_, err := u.urlCollection.UpdateOne(ctx, filter, updatedDoc)
 	if err != nil {
 		return err
 	}

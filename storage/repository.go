@@ -5,6 +5,7 @@ import (
 )
 
 type Repository interface {
-	SaveUrl(shortUrl entity.ShortenUrl) error
+	CreateUrl(shortUrl entity.ShortenUrl) error
+	UpdateUrl(shortUrl entity.ShortenUrl) error
 	FetchUrl(id string) (entity.ShortenUrl, error)
 }
