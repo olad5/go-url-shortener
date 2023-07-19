@@ -16,6 +16,11 @@ type MongoRepository struct {
 	urlCollection *mongo.Collection
 }
 
+var (
+	errRecordNotFound = "Record was not found"
+	TodoContext       = context.TODO()
+)
+
 func New(ctx context.Context, connectionString string) (*MongoRepository, error) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connectionString))
 	if err != nil {
@@ -32,7 +37,7 @@ func New(ctx context.Context, connectionString string) (*MongoRepository, error)
 }
 
 func (u *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(TodoContext, 10*time.Second)
 	defer cancel()
 
 	_, err := u.urlCollection.InsertOne(ctx, shortUrl)
@@ -44,7 +49,7 @@ func (u *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
 }
 
 func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(TodoContext, 10*time.Second)
 	defer cancel()
 
 	filter := bson.M{"unique_id": shortUrl.UniqueId}
@@ -60,15 +65,29 @@ func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
 	return nil
 }
 
-func (u *MongoRepository) FetchUrl(shortCode string) (entity.ShortenUrl, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (u *MongoRepository) FetchUrlByShortCode(shortCode string) (entity.ShortenUrl, error) {
+	ctx, cancel := context.WithTimeout(TodoContext, 10*time.Second)
 	defer cancel()
 
 	result := u.urlCollection.FindOne(ctx, bson.M{"short_url": shortCode})
 	shortUrl := entity.ShortenUrl{}
 	err := result.Decode(&shortUrl)
 	if err != nil {
-		return entity.ShortenUrl{}, errors.New("Record was not found")
+		return entity.ShortenUrl{}, errors.New(errRecordNotFound)
+	}
+
+	return shortUrl, nil
+}
+
+func (u *MongoRepository) FetchUrlByOriginalUrl(originalUrl string) (entity.ShortenUrl, error) {
+	ctx, cancel := context.WithTimeout(TodoContext, 10*time.Second)
+	defer cancel()
+
+	result := u.urlCollection.FindOne(ctx, bson.M{"original_url": originalUrl})
+	shortUrl := entity.ShortenUrl{}
+	err := result.Decode(&shortUrl)
+	if err != nil {
+		return entity.ShortenUrl{}, errors.New(errRecordNotFound)
 	}
 
 	return shortUrl, nil

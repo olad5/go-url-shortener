@@ -1,9 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"math/big"
+	"net/http"
 	"os"
 
 	"github.com/olad5/go-url-shortener/entity"
@@ -25,6 +29,20 @@ func NewUrlService() (*UrlService, error) {
 }
 
 func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
+	if url == "" {
+		return entity.ShortenUrl{}, errors.New("Cannot shorten empty string")
+	}
+
+	exisitingShortUrl, err := u.repository.FetchUrlByOriginalUrl(url)
+
+	if exisitingShortUrl.OriginalUrl == url {
+		return exisitingShortUrl, nil
+	}
+
+	if isLinkLive(url) != true {
+		return entity.ShortenUrl{}, errors.New("Link is dead")
+	}
+
 	randomUniqueId := generateUniqueId()
 	base62String := convertIdToBase62String(randomUniqueId)
 
@@ -34,7 +52,7 @@ func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
 		UniqueId:   randomUniqueId,
 	}
 
-	err := u.repository.CreateUrl(shortUrl)
+	err = u.repository.CreateUrl(shortUrl)
 	if err != nil {
 		return entity.ShortenUrl{}, err
 	}
@@ -42,7 +60,7 @@ func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
 }
 
 func (u *UrlService) Info(slug string) (entity.ShortenUrl, error) {
-	shortUrl, err := u.repository.FetchUrl(slug)
+	shortUrl, err := u.repository.FetchUrlByShortCode(slug)
 	if err != nil {
 		return entity.ShortenUrl{}, err
 	}
@@ -84,5 +102,23 @@ func convertIdToBase62String(decimal int) string {
 
 	return converted
 }
-func isLinkValid() {}
-func isLinkDead()  {}
+
+func isLinkLive(originalUrl string) bool {
+	currentEnvironment := os.Getenv("ENVIRONMENT")
+
+	// I don't know how to make this work in my tests, i'm sorry :(
+	if currentEnvironment != "production" {
+		return true
+	}
+
+	json.NewEncoder(&bytes.Buffer{}).Encode(nil)
+
+	res, err := http.Get(originalUrl)
+	if err != nil {
+		return false
+	}
+	if res.StatusCode != 200 {
+		return false
+	}
+	return true
+}

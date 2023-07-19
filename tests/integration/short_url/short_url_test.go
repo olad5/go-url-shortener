@@ -5,7 +5,10 @@ package integration
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -25,6 +28,8 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
+var commonShortUrl string
+
 func TestShorten(t *testing.T) {
 	tests := []struct {
 		Name         string
@@ -39,6 +44,7 @@ func TestShorten(t *testing.T) {
 			ExpectedCode: 200,
 		},
 	}
+
 	for _, test := range tests {
 		fn := func(t *testing.T) {
 			var b bytes.Buffer
@@ -68,6 +74,50 @@ func TestShorten(t *testing.T) {
 		}
 
 		t.Run(test.Name, fn)
+	}
+}
+
+func TestLongUrlReturnsSameShortUrl(t *testing.T) {
+	url := "https://someurl" + fmt.Sprint(generateUniqueId()) + ".com"
+	initialShortCode, err := createShortUrl(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shortCode, err := createShortUrl(url)
+	if initialShortCode != shortCode {
+		t.Errorf("handler returned wrong status code: got %v want %v", shortCode, initialShortCode)
+		return
+	}
+}
+
+func TestEmptyStringDoesNotShorten(t *testing.T) {
+	originalUrl := ""
+	var b bytes.Buffer
+	json.NewEncoder(&b).Encode(utils.RequestBody{Url: originalUrl})
+
+	req, err := http.NewRequest(http.MethodPost, "/api/v1/shorten", &b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	defer func() {
+		if err := req.Body.Close(); err != nil {
+			t.Errorf("error encountered closing request body: %v", err)
+		}
+	}()
+
+	rr := httptest.NewRecorder()
+	router.Serve(rr, req)
+
+	responseBody, err := decodeResponseBody(rr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if responseBody["message"] != "Cannot shorten empty string" {
+		t.Errorf("handler shortened empty string")
+		return
 	}
 }
 
@@ -113,8 +163,17 @@ func TestInfo(t *testing.T) {
 	}
 }
 
+func generateUniqueId() int {
+	MAX_INT := 7935425686241
+	b := new(big.Int).SetInt64(int64(MAX_INT))
+	randomBigInt, _ := rand.Int(rand.Reader, b)
+	randomeNewInt := int(randomBigInt.Int64())
+	return randomeNewInt
+}
+
 func TestRedirect(t *testing.T) {
-	shortCode, err := createShortUrl()
+	url := "https://example" + fmt.Sprint(generateUniqueId()) + ".com"
+	shortCode, err := createShortUrl(url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,12 +214,14 @@ func TestRedirect(t *testing.T) {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, test.ExpectedCode)
 				return
 			}
+
 			clickCount, err := findShortUrl(test.ShortCode)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if count := clickCount; count != test.ExpectedClickCount {
-				t.Errorf("handler returned wrong status code: got %v want %v", count, test.ExpectedClickCount)
+				t.Errorf("handler returned wrong click count: got %v want %v", count, test.ExpectedClickCount)
 				return
 			}
 		}
@@ -169,10 +230,18 @@ func TestRedirect(t *testing.T) {
 	}
 }
 
-func createShortUrl() (string, error) {
+func decodeResponseBody(response *httptest.ResponseRecorder) (map[string]interface{}, error) {
+	responseBody := make(map[string]interface{})
+	if err := json.NewDecoder(response.Body).Decode(&responseBody); err != nil {
+		return responseBody, err
+	}
+	return responseBody, nil
+}
+
+func createShortUrl(url string) (string, error) {
 	var b bytes.Buffer
 
-	if err := json.NewEncoder(&b).Encode(utils.RequestBody{Url: "https://example.com"}); err != nil {
+	if err := json.NewEncoder(&b).Encode(utils.RequestBody{Url: url}); err != nil {
 		return "", err
 	}
 
@@ -182,10 +251,7 @@ func createShortUrl() (string, error) {
 	}
 	response := httptest.NewRecorder()
 	router.Serve(response, req)
-	responseBody := make(map[string]interface{})
-	if err := json.NewDecoder(response.Body).Decode(&responseBody); err != nil {
-		return "", err
-	}
+	responseBody, err := decodeResponseBody(response)
 
 	shortCode := responseBody["data"].(map[string]interface{})["short_url"].(string)
 	return shortCode, nil

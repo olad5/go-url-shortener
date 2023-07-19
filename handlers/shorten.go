@@ -27,7 +27,7 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 	shortUrl, err := urlService.ShortenUrl(originalUrl.Url)
 	if err != nil {
 		log.Println(err)
-		utils.ErrorResponse(w, utils.ErrSomethingWentWrong, http.StatusInternalServerError)
+		utils.ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	utils.SuccessResponse(w, shortUrl)
