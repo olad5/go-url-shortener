@@ -2,7 +2,13 @@ version: '3.1'
 
 services:
   mongo:
+    container_name: 'mongo-url-shortener'
     image: mongo:4.4.20-rc0
     ports:
       - 27017:27017
 
+  redis:
+    container_name: 'redis-url-shortener'
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"

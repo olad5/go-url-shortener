@@ -85,7 +85,7 @@ func TestLongUrlReturnsSameShortUrl(t *testing.T) {
 	}
 	shortCode, err := createShortUrl(url)
 	if initialShortCode != shortCode {
-		t.Errorf("handler returned wrong status code: got %v want %v", shortCode, initialShortCode)
+		t.Errorf("handler returned wrong short code: got %v want %v", shortCode, initialShortCode)
 		return
 	}
 }
@@ -163,14 +163,6 @@ func TestInfo(t *testing.T) {
 	}
 }
 
-func generateUniqueId() int {
-	MAX_INT := 7935425686241
-	b := new(big.Int).SetInt64(int64(MAX_INT))
-	randomBigInt, _ := rand.Int(rand.Reader, b)
-	randomeNewInt := int(randomBigInt.Int64())
-	return randomeNewInt
-}
-
 func TestRedirect(t *testing.T) {
 	url := "https://example" + fmt.Sprint(generateUniqueId()) + ".com"
 	shortCode, err := createShortUrl(url)
@@ -230,14 +222,6 @@ func TestRedirect(t *testing.T) {
 	}
 }
 
-func decodeResponseBody(response *httptest.ResponseRecorder) (map[string]interface{}, error) {
-	responseBody := make(map[string]interface{})
-	if err := json.NewDecoder(response.Body).Decode(&responseBody); err != nil {
-		return responseBody, err
-	}
-	return responseBody, nil
-}
-
 func createShortUrl(url string) (string, error) {
 	var b bytes.Buffer
 
@@ -275,4 +259,20 @@ func findShortUrl(shortCode string) (float64, error) {
 		return 0, err
 	}
 	return clickCount, nil
+}
+
+func decodeResponseBody(response *httptest.ResponseRecorder) (map[string]interface{}, error) {
+	responseBody := make(map[string]interface{})
+	if err := json.NewDecoder(response.Body).Decode(&responseBody); err != nil {
+		return responseBody, err
+	}
+	return responseBody, nil
+}
+
+func generateUniqueId() int {
+	MAX_INT := 7935425686241
+	b := new(big.Int).SetInt64(int64(MAX_INT))
+	randomBigInt, _ := rand.Int(rand.Reader, b)
+	randomeNewInt := int(randomBigInt.Int64())
+	return randomeNewInt
 }

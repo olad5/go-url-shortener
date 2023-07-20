@@ -1,3 +1,6 @@
 package utils
 
-var ErrSomethingWentWrong = "Something went wrong"
+var (
+	ErrRecordNotFound     = "Record was not found"
+	ErrSomethingWentWrong = "Something went wrong"
+)

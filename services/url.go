@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/olad5/go-url-shortener/entity"
 	"github.com/olad5/go-url-shortener/storage"
-	"github.com/olad5/go-url-shortener/storage/mongo"
 )
 
 type UrlService struct {
@@ -20,12 +18,11 @@ type UrlService struct {
 }
 
 func NewUrlService() (*UrlService, error) {
-	mongo, err := mongo.New(context.Background(), os.Getenv("MONGO_CONNECTION_STRING"))
+	repository, err := storage.NewRespositoryAdapter()
 	if err != nil {
 		return nil, err
 	}
-	service := UrlService{mongo}
-	return &service, nil
+	return &UrlService{repository}, nil
 }
 
 func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
@@ -35,7 +32,7 @@ func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {
 
 	exisitingShortUrl, err := u.repository.FetchUrlByOriginalUrl(url)
 
-	if exisitingShortUrl.OriginalUrl == url {
+	if err == nil {
 		return exisitingShortUrl, nil
 	}
 
