@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/olad5/go-url-shortener/config"
 	"github.com/olad5/go-url-shortener/services"
 	"github.com/olad5/go-url-shortener/utils"
 )
@@ -18,12 +19,13 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlService, err := services.NewUrlService()
+	urlService, err := services.NewUrlService(config.RepositoryAdapter)
 	if err != nil {
 		log.Println(err)
 		utils.ErrorResponse(w, utils.ErrSomethingWentWrong, http.StatusInternalServerError)
 		return
 	}
+
 	shortUrl, err := urlService.ShortenUrl(originalUrl.Url)
 	if err != nil {
 		log.Println(err)

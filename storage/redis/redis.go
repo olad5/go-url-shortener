@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/olad5/go-url-shortener/entity"
+	"github.com/olad5/go-url-shortener/storage"
 	"github.com/olad5/go-url-shortener/utils"
 )
 
@@ -116,6 +117,13 @@ func (r *RedisCache) FetchUrlByOriginalUrl(originalUrl string) (entity.ShortenUr
 	}
 
 	return shortUrl, nil
+}
+
+func (r *RedisCache) Ping() storage.DataSourceHealth {
+	if err := r.Client.Ping(utils.TodoContext).Err(); err != nil {
+		return storage.DEGRADED
+	}
+	return storage.OK
 }
 
 func getSHA256HashOfOriginalUrl(originalUrl string) string {

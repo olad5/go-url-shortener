@@ -15,7 +15,9 @@ import (
 	"testing"
 
 	"github.com/joho/godotenv"
+	"github.com/olad5/go-url-shortener/config"
 	"github.com/olad5/go-url-shortener/router"
+	"github.com/olad5/go-url-shortener/storage/repository_adapter"
 	"github.com/olad5/go-url-shortener/utils"
 )
 
@@ -24,6 +26,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Error Loading .env file")
 	}
+	mongoConnectionString := os.Getenv("MONGO_CONNECTION_STRING")
+	redisConnectionString := os.Getenv("REDIS_ADDRESS")
+	repository, err := repository_adapter.NewRespositoryAdapter(mongoConnectionString, redisConnectionString)
+	config.RepositoryAdapter = repository
 	exitVal := m.Run()
 	os.Exit(exitVal)
 }

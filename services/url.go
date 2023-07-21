@@ -17,12 +17,11 @@ type UrlService struct {
 	repository storage.Repository
 }
 
-func NewUrlService() (*UrlService, error) {
-	repository, err := storage.NewRespositoryAdapter()
-	if err != nil {
-		return nil, err
+func NewUrlService(RepositoryAdapter storage.Repository) (*UrlService, error) {
+	if RepositoryAdapter == nil {
+		return &UrlService{}, errors.New("UrlService failed to initialize")
 	}
-	return &UrlService{repository}, nil
+	return &UrlService{RepositoryAdapter}, nil
 }
 
 func (u *UrlService) ShortenUrl(url string) (entity.ShortenUrl, error) {

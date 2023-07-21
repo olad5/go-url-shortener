@@ -6,8 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/olad5/go-url-shortener/config"
 	"github.com/olad5/go-url-shortener/handlers"
 	"github.com/olad5/go-url-shortener/middleware"
+	"github.com/olad5/go-url-shortener/storage"
 	"github.com/olad5/go-url-shortener/utils"
 )
 
@@ -20,10 +22,10 @@ func Initialize() http.Handler {
 var (
 	baseUrl = "/api/v1"
 	routes  = []route{
-		newRoute("GET", baseUrl+"/healthcheck", handlers.Healthcheck),
-		newRoute("POST", baseUrl+"/shorten", handlers.Shorten),
-		newRoute("GET", baseUrl+"/info/([^/]+)", handlers.Info),
-		newRoute("GET", baseUrl+"/([^/]+)", handlers.Redirect),
+		newRoute("GET", prefixRouteWithBaseUrl("/healthcheck"), handlers.Healthcheck),
+		newRoute("POST", prefixRouteWithBaseUrl("/shorten"), handlers.Shorten),
+		newRoute("GET", prefixRouteWithBaseUrl("/info/([^/]+)"), handlers.Info),
+		newRoute("GET", prefixRouteWithBaseUrl("/([^/]+)"), handlers.Redirect),
 	}
 )
 
@@ -38,8 +40,16 @@ type route struct {
 }
 
 func Serve(w http.ResponseWriter, r *http.Request) {
+	var routesToProcess []route
+	if config.RepositoryAdapter.Ping() == storage.DOWN {
+		routesToProcess = append(routesToProcess, routes[0])
+	} else {
+		routesToProcess = routes
+	}
+
 	var allow []string
-	for _, route := range routes {
+
+	for _, route := range routesToProcess {
 		matches := route.regex.FindStringSubmatch(r.URL.Path)
 
 		if len(matches) > 0 {
@@ -57,5 +67,18 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "405 method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	if isServerHealthy(routesToProcess) == false {
+		http.Error(w, utils.ErrSomethingWentWrong, http.StatusInternalServerError)
+		return
+	}
 	http.NotFound(w, r)
+}
+
+func isServerHealthy(routesToProcess []route) bool {
+	return len(routesToProcess) == len(routes)
+}
+
+func prefixRouteWithBaseUrl(route string) string {
+	return baseUrl + route
 }

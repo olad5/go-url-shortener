@@ -1,16 +1,22 @@
 package handlers
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 
-	"github.com/olad5/go-url-shortener/utils"
+	"github.com/olad5/go-url-shortener/config"
 )
 
 func Healthcheck(w http.ResponseWriter, r *http.Request) {
 	type healthCheckResponse struct {
-		Status  string `json:"status"`
-		Message string `json:"message"`
+		Status string `json:"status"`
 	}
-	data := map[string]interface{}{"message": "healthcheck complete"}
-	utils.SuccessResponse(w, data)
+
+	healthStatus := config.RepositoryAdapter.Ping()
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(healthCheckResponse{Status: string(healthStatus)}); err != nil {
+		log.Printf("Error sending response: %v", err)
+	}
 }

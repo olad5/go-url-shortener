@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/olad5/go-url-shortener/entity"
+	"github.com/olad5/go-url-shortener/storage"
 	"github.com/olad5/go-url-shortener/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var contextTimeoutDuration = 5 * time.Second
@@ -34,11 +36,11 @@ func New(ctx context.Context, connectionString string) (*MongoRepository, error)
 	return &repo, nil
 }
 
-func (u *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
+func (m *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
 	ctx, cancel := context.WithTimeout(utils.TodoContext, contextTimeoutDuration)
 	defer cancel()
 
-	_, err := u.urlCollection.InsertOne(ctx, shortUrl)
+	_, err := m.urlCollection.InsertOne(ctx, shortUrl)
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func (u *MongoRepository) CreateUrl(shortUrl entity.ShortenUrl) error {
 	return nil
 }
 
-func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
+func (m *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
 	ctx, cancel := context.WithTimeout(utils.TodoContext, contextTimeoutDuration)
 	defer cancel()
 
@@ -55,7 +57,7 @@ func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
 		"$set": shortUrl,
 	}
 
-	_, err := u.urlCollection.UpdateOne(ctx, filter, updatedDoc)
+	_, err := m.urlCollection.UpdateOne(ctx, filter, updatedDoc)
 	if err != nil {
 		return err
 	}
@@ -63,11 +65,11 @@ func (u *MongoRepository) UpdateUrl(shortUrl entity.ShortenUrl) error {
 	return nil
 }
 
-func (u *MongoRepository) FetchUrlByShortCode(shortCode string) (entity.ShortenUrl, error) {
+func (m *MongoRepository) FetchUrlByShortCode(shortCode string) (entity.ShortenUrl, error) {
 	ctx, cancel := context.WithTimeout(utils.TodoContext, contextTimeoutDuration)
 	defer cancel()
 
-	result := u.urlCollection.FindOne(ctx, bson.M{"short_url": shortCode})
+	result := m.urlCollection.FindOne(ctx, bson.M{"short_url": shortCode})
 	shortUrl := entity.ShortenUrl{}
 	err := result.Decode(&shortUrl)
 	if err != nil {
@@ -77,11 +79,11 @@ func (u *MongoRepository) FetchUrlByShortCode(shortCode string) (entity.ShortenU
 	return shortUrl, nil
 }
 
-func (u *MongoRepository) FetchUrlByOriginalUrl(originalUrl string) (entity.ShortenUrl, error) {
+func (m *MongoRepository) FetchUrlByOriginalUrl(originalUrl string) (entity.ShortenUrl, error) {
 	ctx, cancel := context.WithTimeout(utils.TodoContext, contextTimeoutDuration)
 	defer cancel()
 
-	result := u.urlCollection.FindOne(ctx, bson.M{"original_url": originalUrl})
+	result := m.urlCollection.FindOne(ctx, bson.M{"original_url": originalUrl})
 	shortUrl := entity.ShortenUrl{}
 	err := result.Decode(&shortUrl)
 	if err != nil {
@@ -89,4 +91,13 @@ func (u *MongoRepository) FetchUrlByOriginalUrl(originalUrl string) (entity.Shor
 	}
 
 	return shortUrl, nil
+}
+
+func (m *MongoRepository) Ping() storage.DataSourceHealth {
+	ctx, cancel := context.WithTimeout(utils.TodoContext, contextTimeoutDuration)
+	defer cancel()
+	if err := m.db.Client().Ping(ctx, readpref.Primary()); err != nil {
+		return storage.DOWN
+	}
+	return storage.OK
 }
