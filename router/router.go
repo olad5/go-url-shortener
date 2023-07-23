@@ -22,15 +22,15 @@ func Initialize() http.Handler {
 var (
 	baseUrl = "/api/v1"
 	routes  = []route{
-		newRoute("GET", prefixRouteWithBaseUrl("/healthcheck"), handlers.Healthcheck),
-		newRoute("POST", prefixRouteWithBaseUrl("/shorten"), handlers.Shorten),
-		newRoute("GET", prefixRouteWithBaseUrl("/info/([^/]+)"), handlers.Info),
-		newRoute("GET", prefixRouteWithBaseUrl("/([^/]+)"), handlers.Redirect),
+		newRoute("GET", "/healthcheck", handlers.Healthcheck),
+		newRoute("POST", "/shorten", handlers.Shorten),
+		newRoute("GET", "/info/([^/]+)", handlers.Info),
+		newRoute("GET", "/([^/]+)", handlers.Redirect),
 	}
 )
 
 func newRoute(method, pattern string, handler http.HandlerFunc) route {
-	return route{method, regexp.MustCompile("^" + pattern + "$"), handler}
+	return route{method, regexp.MustCompile("^" + baseUrl + pattern + "$"), handler}
 }
 
 type route struct {
@@ -69,6 +69,7 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isServerHealthy(routesToProcess) == false {
+		w.WriteHeader(http.StatusInternalServerError)
 		http.Error(w, utils.ErrSomethingWentWrong, http.StatusInternalServerError)
 		return
 	}
@@ -77,8 +78,4 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 
 func isServerHealthy(routesToProcess []route) bool {
 	return len(routesToProcess) == len(routes)
-}
-
-func prefixRouteWithBaseUrl(route string) string {
-	return baseUrl + route
 }
